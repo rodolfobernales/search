@@ -1,186 +1,364 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mi Tienda con Google Sheets</title>
+    <title>Interactive Store Dashboard</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-color: #4a90e2; /* Un azul moderno */
-            --background-color: #f4f7f6;
-            --font-color: #333;
-            --border-color: #e0e0e0;
-            --header-color: #ffffff;
+            --primary-color: #4a90e2;
+            --secondary-color: #f5f7fa;
+            --text-color: #333;
+            --border-color: #e1e4e8;
+            --active-status: #28a745;
+            --inactive-status: #dc3545;
+            --hover-color: #f0f4f8;
             --shadow-color: rgba(0, 0, 0, 0.1);
         }
 
         body {
-            font-family: 'Poppins', sans-serif;
-            background-color: var(--background-color);
-            color: var(--font-color);
+            font-family: 'Roboto', sans-serif;
             margin: 0;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start; /* Alinea arriba para ver desde el inicio */
-            min-height: 100vh;
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+        }
+
+        .main-header {
+            background-color: white;
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid var(--border-color);
+            text-align: center;
+            box-shadow: 0 2px 4px var(--shadow-color);
+        }
+
+        .main-header h1 {
+            margin: 0;
+            font-size: 2rem;
+            font-weight: 500;
+            color: var(--primary-color);
         }
 
         .container {
-            width: 90%;
-            max-width: 1200px; /* Ancho máximo aumentado para más columnas */
-            background-color: var(--header-color);
-            border-radius: 12px;
-            box-shadow: 0 8px 25px var(--shadow-color);
-            padding: 20px 30px; /* Más padding horizontal */
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
         }
 
-        h1 {
-            color: var(--primary-color);
-            text-align: center;
-            font-weight: 600;
-            margin-bottom: 10px;
+        .controls-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            background-color: #fff;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px var(--shadow-color);
+        }
+
+        .search-wrapper {
+            flex-grow: 1;
+            min-width: 250px;
         }
         
-        p {
-            text-align: center;
-            margin-bottom: 30px;
-            color: #666;
-            font-size: 1.1rem;
+        .search-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
         }
 
-        #status {
-            text-align: center;
-            font-style: italic;
-            color: #888;
-            padding: 20px;
-            font-size: 1.1rem;
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+        }
+
+        .filter-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .filter-wrapper label {
+            font-weight: 500;
+        }
+
+        .status-filter {
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 1rem;
+            background-color: white;
+            cursor: pointer;
         }
 
         .table-container {
-            overflow-x: auto; /* Permite scroll horizontal si la tabla es muy ancha */
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px var(--shadow-color);
+            overflow-x: auto;
         }
-        
-        table {
+
+        .store-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
         }
 
-        th, td {
-            padding: 12px 15px;
+        .store-table th,
+        .store-table td {
+            padding: 1rem 1.5rem;
             text-align: left;
             border-bottom: 1px solid var(--border-color);
-            white-space: nowrap; /* Evita que el texto largo salte de línea */
+            white-space: nowrap;
+        }
+        
+        .store-table td[data-label="Store UUID"] {
+            font-family: monospace;
+            font-size: 0.9em;
         }
 
-        thead tr {
-            background-color: var(--primary-color);
-            color: var(--header-color);
+        .store-table th {
+            background-color: #f8f9fa;
+            font-weight: 700;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer; /* Add cursor for sorting */
+        }
+        
+        .store-table th:hover {
+            background-color: #e9ecef;
         }
 
-        th {
-            font-weight: 600;
-            position: sticky; /* Encabezados fijos al hacer scroll vertical */
-            top: 0;
-            background-color: var(--primary-color); /* Fondo necesario para sticky */
+        .store-table tbody tr:hover {
+            background-color: var(--hover-color);
+        }
+        
+        .store-table tbody tr:last-child td {
+            border-bottom: none;
         }
 
-        tbody tr:nth-child(even) {
-            background-color: #f9fafb;
+        .status {
+            padding: 0.3rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: white;
+            text-align: center;
+            display: inline-block;
         }
 
-        tbody tr:hover {
-            background-color: #eef5ff; /* Un azul muy claro al pasar el mouse */
+        .status-active {
+            background-color: var(--active-status);
+        }
+
+        .status-inactive {
+            background-color: var(--inactive-status);
+        }
+
+        @media (max-width: 992px) {
+            .store-table thead {
+                display: none;
+            }
+
+            .store-table, .store-table tbody, .store-table tr, .store-table td {
+                display: block;
+                width: 100%;
+            }
+
+            .store-table tr {
+                margin-bottom: 1rem;
+                border: 1px solid var(--border-color);
+                border-radius: 8px;
+                overflow: hidden;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            }
+
+            .store-table td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 1px solid var(--border-color);
+                padding-left: 50%;
+                position: relative;
+                white-space: normal;
+                text-align: right;
+            }
+
+            .store-table td:before {
+                content: attr(data-label);
+                position: absolute;
+                left: 1rem;
+                width: calc(50% - 2rem);
+                padding-right: 10px;
+                white-space: nowrap;
+                font-weight: 700;
+                text-align: left;
+            }
+            
+            .store-table tr td:last-child {
+                border-bottom: 0;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .controls-container {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .main-header h1 {
+                font-size: 1.5rem;
+            }
         }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h1>Nuestros Productos</h1>
-        <p>Estos datos se están cargando en vivo desde una hoja de cálculo de Google Sheets.</p>
+    <header class="main-header">
+        <h1>Interactive Store Dashboard</h1>
+    </header>
 
-        <div id="status">Cargando productos...</div>
+    <main class="container">
+        <div class="controls-container">
+            <div class="search-wrapper">
+                 <input type="text" id="searchInput" class="search-input" placeholder="Search by name, ID, location...">
+            </div>
+            <div class="filter-wrapper">
+                <label for="statusFilter">Filter by status:</label>
+                <select id="statusFilter" class="status-filter">
+                    <option value="all">All</option>
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                </select>
+            </div>
+        </div>
 
         <div class="table-container">
-            <table id="data-table" style="display:none;">
+            <table class="store-table">
                 <thead>
-                    <tr id="table-headers">
-                        </tr>
+                    <tr>
+                        <th>Store ID</th>
+                        <th>Store UUID</th>
+                        <th>Store Name</th>
+                        <th>Location</th>
+                        <th>Status</th>
+                        <th>Is Visible</th>
+                        <th>Orders (Last Day)</th>
+                        <th>Orders (Last 7 Days)</th>
+                        <th>Orders (Last 30 Days)</th>
+                    </tr>
                 </thead>
-                <tbody id="table-body">
-                    </tbody>
+                <tbody id="storeTableBody">
+                    <tr>
+                        <td data-label="Store ID">101</td>
+                        <td data-label="Store UUID">a1b2c3d4-e5f6-7890-1234-567890abcdef</td>
+                        <td data-label="Store Name">The Flavor Corner</td>
+                        <td data-label="Location">Santiago, Chile</td>
+                        <td data-label="Status"><span class="status status-active">Active</span></td>
+                        <td data-label="Is Visible">Yes</td>
+                        <td data-label="Orders (Last Day)">25</td>
+                        <td data-label="Orders (Last 7 Days)">175</td>
+                        <td data-label="Orders (Last 30 Days)">750</td>
+                    </tr>
+                    <tr>
+                        <td data-label="Store ID">102</td>
+                        <td data-label="Store UUID">f0e9d8c7-b6a5-4321-fedc-ba9876543210</td>
+                        <td data-label="Store Name">Urban Fashion</td>
+                        <td data-label="Location">Valparaíso, Chile</td>
+                        <td data-label="Status"><span class="status status-inactive">Inactive</span></td>
+                        <td data-label="Is Visible">No</td>
+                        <td data-label="Orders (Last Day)">0</td>
+                        <td data-label="Orders (Last 7 Days)">12</td>
+                        <td data-label="Orders (Last 30 Days)">85</td>
+                    </tr>
+                    <tr>
+                        <td data-label="Store ID">103</td>
+                        <td data-label="Store UUID">12345678-90ab-cdef-0123-456789abcdef</td>
+                        <td data-label="Store Name">TechWorld</td>
+                        <td data-label="Location">Concepción, Chile</td>
+                        <td data-label="Status"><span class="status status-active">Active</span></td>
+                        <td data-label="Is Visible">Yes</td>
+                        <td data-label="Orders (Last Day)">52</td>
+                        <td data-label="Orders (Last 7 Days)">350</td>
+                        <td data-label="Orders (Last 30 Days)">1500</td>
+                    </tr>
+                    <tr>
+                        <td data-label="Store ID">104</td>
+                        <td data-label="Store UUID">fedcba98-7654-3210-fedc-ba9876543210</td>
+                        <td data-label="Store Name">Southern Delights</td>
+                        <td data-label="Location">Punta Arenas, Chile</td>
+                        <td data-label="Status"><span class="status status-active">Active</span></td>
+                        <td data-label="Is Visible">Yes</td>
+                        <td data-label="Orders (Last Day)">15</td>
+                        <td data-label="Orders (Last 7 Days)">105</td>
+                        <td data-label="Orders (Last 30 Days)">450</td>
+                    </tr>
+                     <tr>
+                        <td data-label="Store ID">105</td>
+                        <td data-label="Store UUID">a1b2c3d4-e5f6-7890-1234-567890abcxyz</td>
+                        <td data-label="Store Name">Central Cafe</td>
+                        <td data-label="Location">Santiago, Chile</td>
+                        <td data-label="Status"><span class="status status-inactive">Inactive</span></td>
+                        <td data-label="Is Visible">No</td>
+                        <td data-label="Orders (Last Day)">2</td>
+                        <td data-label="Orders (Last 7 Days)">20</td>
+                        <td data-label="Orders (Last 30 Days)">95</td>
+                    </tr>
+                </tbody>
             </table>
         </div>
-    </div>
+    </main>
 
     <script>
-        // --- URL de tu hoja de cálculo (la que tú proporcionaste) ---
-        const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ8vNuYtCPa8QOxQb6eRZ_GBuUCDejcp4EMrt56K1X61vW-2QOGyPyZfaVHw9K9m40q5TY1BapKnS_s/pub?gid=0&single=true&output=csv';
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('searchInput');
+            const statusFilter = document.getElementById('statusFilter');
+            const tableBody = document.getElementById('storeTableBody');
+            const tableRows = Array.from(tableBody.getElementsByTagName('tr'));
 
-        // --- Elementos del DOM ---
-        const statusDisplay = document.getElementById('status');
-        const dataTable = document.getElementById('data-table');
-        const tableHeadersRow = document.getElementById('table-headers');
-        const tableBody = document.getElementById('table-body');
+            function filterTable() {
+                const searchTerm = searchInput.value.toLowerCase();
+                const statusValue = statusFilter.value;
 
-        fetch(sheetUrl)
-            .then(response => {
-                if (!response.ok) throw new Error('Error al obtener los datos de la red');
-                return response.text();
-            })
-            .then(csvText => {
-                statusDisplay.style.display = 'none';
-                dataTable.style.display = 'table';
-
-                // Divide el CSV en filas. trim() elimina espacios/líneas en blanco al final.
-                const rows = csvText.trim().split('\n');
-                
-                // --- CAMBIO CLAVE: LEER LOS ENCABEZADOS Y DATOS DINÁMICAMENTE ---
-                
-                // 1. La primera fila es para los encabezados.
-                const headers = rows[0].split(',');
-                
-                // 2. El resto de las filas son los datos.
-                const dataRows = rows.slice(1);
-
-                // 3. Crear los encabezados de la tabla (<th>)
-                tableHeadersRow.innerHTML = ''; // Limpiar encabezados por si acaso
-                headers.forEach(headerText => {
-                    const th = document.createElement('th');
-                    // .replace(/"/g, '') limpia las comillas que a veces añade el CSV
-                    th.textContent = headerText.trim().replace(/"/g, ''); 
-                    tableHeadersRow.appendChild(th);
-                });
-
-                // 4. Llenar el cuerpo de la tabla (<tbody>) con todas las filas y columnas
-                tableBody.innerHTML = ''; // Limpiar cuerpo de la tabla
-                dataRows.forEach(rowData => {
-                    if (rowData.trim() === '') return; // Omitir filas vacías
-
-                    const columns = rowData.split(',');
-                    const tr = document.createElement('tr');
+                // Iterate over each row of the table
+                tableRows.forEach(row => {
+                    const rowText = row.textContent.toLowerCase();
+                    const statusCell = row.querySelector('td[data-label="Status"]');
                     
-                    columns.forEach(cellData => {
-                        const td = document.createElement('td');
-                        td.textContent = cellData.trim().replace(/"/g, '');
-                        tr.appendChild(td);
-                    });
+                    // If the status cell exists, get its text content
+                    const statusText = statusCell ? statusCell.textContent.trim() : '';
 
-                    tableBody.appendChild(tr);
+                    // Check if the row matches the search term
+                    const searchMatch = rowText.includes(searchTerm);
+
+                    // Check if the row matches the status filter
+                    const statusMatch = (statusValue === 'all') || (statusText === statusValue);
+
+                    // Show or hide the row based on the results
+                    if (searchMatch && statusMatch) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
                 });
+            }
 
-            })
-            .catch(error => {
-                console.error('Hubo un problema al cargar los datos:', error);
-                statusDisplay.textContent = `Error al cargar los productos. Revisa la URL o la configuración de tu hoja.`;
-                statusDisplay.style.color = 'red';
-            });
+            // Add event listeners for the search and filter controls
+            searchInput.addEventListener('keyup', filterTable);
+            statusFilter.addEventListener('change', filterTable);
+        });
     </script>
 
 </body>
