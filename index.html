@@ -4,83 +4,182 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mi Tienda con Google Sheets</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    
     <style>
-        body { font-family: sans-serif; container: 800px; margin: auto; padding: 20px; }
-        h1 { text-align: center; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
-        th { background-color: #f2f2f2; }
-        #loading { text-align: center; font-style: italic; }
+        :root {
+            --primary-color: #4a90e2; /* Un azul moderno */
+            --background-color: #f4f7f6;
+            --font-color: #333;
+            --border-color: #e0e0e0;
+            --header-color: #ffffff;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--background-color);
+            color: var(--font-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* Alinea arriba para ver desde el inicio */
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1200px; /* Ancho máximo aumentado para más columnas */
+            background-color: var(--header-color);
+            border-radius: 12px;
+            box-shadow: 0 8px 25px var(--shadow-color);
+            padding: 20px 30px; /* Más padding horizontal */
+        }
+
+        h1 {
+            color: var(--primary-color);
+            text-align: center;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        p {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        #status {
+            text-align: center;
+            font-style: italic;
+            color: #888;
+            padding: 20px;
+            font-size: 1.1rem;
+        }
+
+        .table-container {
+            overflow-x: auto; /* Permite scroll horizontal si la tabla es muy ancha */
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            white-space: nowrap; /* Evita que el texto largo salte de línea */
+        }
+
+        thead tr {
+            background-color: var(--primary-color);
+            color: var(--header-color);
+        }
+
+        th {
+            font-weight: 600;
+            position: sticky; /* Encabezados fijos al hacer scroll vertical */
+            top: 0;
+            background-color: var(--primary-color); /* Fondo necesario para sticky */
+        }
+
+        tbody tr:nth-child(even) {
+            background-color: #f9fafb;
+        }
+
+        tbody tr:hover {
+            background-color: #eef5ff; /* Un azul muy claro al pasar el mouse */
+        }
     </style>
 </head>
 <body>
 
-    <h1>Nuestros Productos</h1>
-    <p>Estos datos se están cargando en vivo desde una hoja de cálculo de Google Sheets.</p>
+    <div class="container">
+        <h1>Nuestros Productos</h1>
+        <p>Estos datos se están cargando en vivo desde una hoja de cálculo de Google Sheets.</p>
 
-    <div id="loading">Cargando productos...</div>
+        <div id="status">Cargando productos...</div>
 
-    <table id="products-table" style="display:none;">
-        <thead>
-            <tr>
-                <th>Producto</th>
-                <th>Descripción</th>
-                <th>Precio</th>
-            </tr>
-        </thead>
-        <tbody id="table-body">
-            </tbody>
-    </table>
+        <div class="table-container">
+            <table id="data-table" style="display:none;">
+                <thead>
+                    <tr id="table-headers">
+                        </tr>
+                </thead>
+                <tbody id="table-body">
+                    </tbody>
+            </table>
+        </div>
+    </div>
 
     <script>
-        // URL de tu hoja de cálculo publicada como CSV.
-        // ¡¡¡REEMPLAZA ESTA URL CON LA TUYA!!!
+        // --- URL de tu hoja de cálculo (la que tú proporcionaste) ---
         const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ8vNuYtCPa8QOxQb6eRZ_GBuUCDejcp4EMrt56K1X61vW-2QOGyPyZfaVHw9K9m40q5TY1BapKnS_s/pub?gid=0&single=true&output=csv';
 
-        // Elementos del DOM
+        // --- Elementos del DOM ---
+        const statusDisplay = document.getElementById('status');
+        const dataTable = document.getElementById('data-table');
+        const tableHeadersRow = document.getElementById('table-headers');
         const tableBody = document.getElementById('table-body');
-        const loadingMessage = document.getElementById('loading');
-        const productsTable = document.getElementById('products-table');
 
-        // Usamos 'fetch' para obtener los datos del CSV
         fetch(sheetUrl)
-            .then(response => response.text())
+            .then(response => {
+                if (!response.ok) throw new Error('Error al obtener los datos de la red');
+                return response.text();
+            })
             .then(csvText => {
-                // Ocultar el mensaje de "cargando" y mostrar la tabla
-                loadingMessage.style.display = 'none';
-                productsTable.style.display = 'table';
+                statusDisplay.style.display = 'none';
+                dataTable.style.display = 'table';
 
-                // Dividir el texto CSV en filas, ignorando la primera (los encabezados)
-                const rows = csvText.split('\n').slice(1);
+                // Divide el CSV en filas. trim() elimina espacios/líneas en blanco al final.
+                const rows = csvText.trim().split('\n');
                 
-                rows.forEach(rowData => {
-                    // Dividir cada fila en celdas por la coma
+                // --- CAMBIO CLAVE: LEER LOS ENCABEZADOS Y DATOS DINÁMICAMENTE ---
+                
+                // 1. La primera fila es para los encabezados.
+                const headers = rows[0].split(',');
+                
+                // 2. El resto de las filas son los datos.
+                const dataRows = rows.slice(1);
+
+                // 3. Crear los encabezados de la tabla (<th>)
+                tableHeadersRow.innerHTML = ''; // Limpiar encabezados por si acaso
+                headers.forEach(headerText => {
+                    const th = document.createElement('th');
+                    // .replace(/"/g, '') limpia las comillas que a veces añade el CSV
+                    th.textContent = headerText.trim().replace(/"/g, ''); 
+                    tableHeadersRow.appendChild(th);
+                });
+
+                // 4. Llenar el cuerpo de la tabla (<tbody>) con todas las filas y columnas
+                tableBody.innerHTML = ''; // Limpiar cuerpo de la tabla
+                dataRows.forEach(rowData => {
+                    if (rowData.trim() === '') return; // Omitir filas vacías
+
                     const columns = rowData.split(',');
-
-                    // Asumimos el orden: ID, Producto, Descripcion, Precio
-                    const id = columns[0];
-                    const producto = columns[1];
-                    const descripcion = columns[2];
-                    const precio = columns[3];
-
-                    // Crear una nueva fila <tr> en la tabla
                     const tr = document.createElement('tr');
                     
-                    // Añadir las celdas <td> a la fila
-                    // Omitimos la columna ID en la tabla
-                    tr.innerHTML = `
-                        <td>${producto}</td>
-                        <td>${descripcion}</td>
-                        <td>${precio}</td>
-                    `;
-                    
-                    // Añadir la fila completa al cuerpo de la tabla
+                    columns.forEach(cellData => {
+                        const td = document.createElement('td');
+                        td.textContent = cellData.trim().replace(/"/g, '');
+                        tr.appendChild(td);
+                    });
+
                     tableBody.appendChild(tr);
                 });
+
             })
             .catch(error => {
-                console.error('Error al cargar los datos:', error);
-                loadingMessage.innerText = 'Error al cargar los productos. Inténtalo de nuevo más tarde.';
+                console.error('Hubo un problema al cargar los datos:', error);
+                statusDisplay.textContent = `Error al cargar los productos. Revisa la URL o la configuración de tu hoja.`;
+                statusDisplay.style.color = 'red';
             });
     </script>
 
