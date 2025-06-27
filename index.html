@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Tienda con Google Sheets</title>
+    <style>
+        body { font-family: sans-serif; container: 800px; margin: auto; padding: 20px; }
+        h1 { text-align: center; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        #loading { text-align: center; font-style: italic; }
+    </style>
+</head>
+<body>
+
+    <h1>Nuestros Productos</h1>
+    <p>Estos datos se están cargando en vivo desde una hoja de cálculo de Google Sheets.</p>
+
+    <div id="loading">Cargando productos...</div>
+
+    <table id="products-table" style="display:none;">
+        <thead>
+            <tr>
+                <th>Producto</th>
+                <th>Descripción</th>
+                <th>Precio</th>
+            </tr>
+        </thead>
+        <tbody id="table-body">
+            </tbody>
+    </table>
+
+    <script>
+        // URL de tu hoja de cálculo publicada como CSV.
+        // ¡¡¡REEMPLAZA ESTA URL CON LA TUYA!!!
+        const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ8vNuYtCPa8QOxQb6eRZ_GBuUCDejcp4EMrt56K1X61vW-2QOGyPyZfaVHw9K9m40q5TY1BapKnS_s/pub?gid=0&single=true&output=csv';
+
+        // Elementos del DOM
+        const tableBody = document.getElementById('table-body');
+        const loadingMessage = document.getElementById('loading');
+        const productsTable = document.getElementById('products-table');
+
+        // Usamos 'fetch' para obtener los datos del CSV
+        fetch(sheetUrl)
+            .then(response => response.text())
+            .then(csvText => {
+                // Ocultar el mensaje de "cargando" y mostrar la tabla
+                loadingMessage.style.display = 'none';
+                productsTable.style.display = 'table';
+
+                // Dividir el texto CSV en filas, ignorando la primera (los encabezados)
+                const rows = csvText.split('\n').slice(1);
+                
+                rows.forEach(rowData => {
+                    // Dividir cada fila en celdas por la coma
+                    const columns = rowData.split(',');
+
+                    // Asumimos el orden: ID, Producto, Descripcion, Precio
+                    const id = columns[0];
+                    const producto = columns[1];
+                    const descripcion = columns[2];
+                    const precio = columns[3];
+
+                    // Crear una nueva fila <tr> en la tabla
+                    const tr = document.createElement('tr');
+                    
+                    // Añadir las celdas <td> a la fila
+                    // Omitimos la columna ID en la tabla
+                    tr.innerHTML = `
+                        <td>${producto}</td>
+                        <td>${descripcion}</td>
+                        <td>${precio}</td>
+                    `;
+                    
+                    // Añadir la fila completa al cuerpo de la tabla
+                    tableBody.appendChild(tr);
+                });
+            })
+            .catch(error => {
+                console.error('Error al cargar los datos:', error);
+                loadingMessage.innerText = 'Error al cargar los productos. Inténtalo de nuevo más tarde.';
+            });
+    </script>
+
+</body>
+</html>
